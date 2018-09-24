@@ -1,0 +1,28 @@
+{
+  "name": "php-composter/php-composter-phpcs",
+  "description": "Automatically install a git pre-commit hook to check your PHP files upon each commit to make sure they comply to the Code Style you have defined in phpcs.xml.",
+  "type": "php-composter-action",
+  "require": {
+    "php-composter/php-composter": "^0.3.3",
+    "squizlabs/php_codesniffer": "^3.3",
+    "eloquent/pathogen": "^0.6.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "PHPComposter\\PHPComposter\\PHPCS\\": "src/"
+    }
+  },
+  "extra": {
+    "php-composter-hooks": {
+      "20.pre-commit": "PHPComposter\\PHPComposter\\PHPCS\\Action::sniffStagedFiles"
+    }
+  },
+  "license": "GPL v3",
+  "authors": [
+    {
+      "name": "Pascal Scheepers",
+      "email": "pascal@splotch.es"
+    }
+  ],
+  "minimum-stability": "stable"
+}
