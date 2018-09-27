@@ -15,7 +15,7 @@
   },
   "extra": {
     "php-composter-hooks": {
-      "20.pre-commit": "PHPComposter\\PHPComposter\\PHPCS\\Action::sniffStagedFiles"
+      "20.pre-commit": "PHPComposter\\PHPComposter\\PHPCS\\Action::runPhpCs"
     }
   },
   "license": "GPL v3",

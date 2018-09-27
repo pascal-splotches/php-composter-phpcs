@@ -28,7 +28,7 @@ It automatically works whenever you execute a `git commit`.
 
 ## Built With
 
-- [Composter](https://github.com/squizlabs/PHP_CodeSniffer)
+- [Composter](https://github.com/php-composter/php-composter)
 - [PHP CodeSniffer Project](https://github.com/squizlabs/PHP_CodeSniffer)
 
 ## Contributing

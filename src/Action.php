@@ -30,16 +30,16 @@ class Action extends BaseAction
     const OS_UNKNOWN = 'Unknown';
 
     /**
-     * Verify whether staged files adhere to the standards defined in phpcs.xml
+     * Verify whether files adhere to the standards defined in phpcs.xml
      *
      * @since 0.1.0
      */
-    public function sniffStagedFiles()
+    public function runPhpCs()
     {
         try {
             $this->checkPhpCsConfiguration();
 
-            $process = new Process(array($this->getPhpCsPath()));
+            $process = new Process([$this->getPhpCsPath()]);
             $process->run();
 
             $this->write($process->getOutput());
@@ -75,7 +75,8 @@ class Action extends BaseAction
     }
 
     /**
-     * Build teh path to the PHPCS configuration
+     * Build the path to the PHPCS configuration
+     *
      * @return string
      */
     protected function getPhpCsConfigurationPath()
