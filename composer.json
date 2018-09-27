@@ -1,5 +1,5 @@
 {
-  "name": "php-composter/php-composter-phpcs",
+  "name": "splotches/php-composter-phpcs",
   "description": "Automatically install a git pre-commit hook to check your PHP files upon each commit to make sure they comply to the Code Style you have defined in phpcs.xml.",
   "type": "php-composter-action",
   "require": {
