@@ -2,13 +2,11 @@
 
 namespace PHPComposter\PHPComposter\PHPCS;
 
-use Eloquent\Pathogen\Exception\InvalidPathStateException;
-use Eloquent\Pathogen\FileSystem\PlatformFileSystemPath;
-use PHP_CodeSniffer\Config;
-use PHP_CodeSniffer\Exceptions\DeepExitException;
-use PHP_CodeSniffer\Runner;
+use Eloquent\Pathogen\FileSystem\FileSystemPath;
+use Exception;
 use PHPComposter\PHPComposter\BaseAction;
-use ReflectionObject;
+use RuntimeException;
+use Symfony\Component\Process\Process;
 
 /**
  * Class CodeSniffer
@@ -21,9 +19,15 @@ use ReflectionObject;
  */
 class Action extends BaseAction
 {
-    const EXIT_NO_ERRORS = 0;
     const EXIT_ERRORS_FOUND = 1;
-    const EXIT_EXCEPTION = 2;
+    const EXIT_WITH_EXCEPTION = 2;
+
+    const OS_WINDOWS = 'Windows';
+    const OS_BSD = 'BSD';
+    const OS_DARWIN = 'Darwin';
+    const OS_SOLARIS = 'Solaris';
+    const OS_LINUX = 'Linux';
+    const OS_UNKNOWN = 'Unknown';
 
     /**
      * Verify whether staged files adhere to the standards defined in phpcs.xml
@@ -33,85 +37,86 @@ class Action extends BaseAction
     public function sniffStagedFiles()
     {
         try {
-            $numberOfErrors = $this->runPhpCodeSniffer();
+            $this->checkPhpCsConfiguration();
 
-            if ($numberOfErrors === 0) {
-                $this->success('PHP Code Sniffer found no errors! Good Job!', self::EXIT_NO_ERRORS);
-            } else {
-                $this->error('PHP Code Sniffer found errors! Aborting Commit.', self::EXIT_ERRORS_FOUND);
+            $process = new Process(array($this->getPhpCsPath()));
+            $process->run();
+
+            $this->write($process->getOutput());
+
+            if (!$process->isSuccessful()) {
+                $this->success('PHPCS detected no errors, allowing commit to proceed.');
             }
-        } catch (DeepExitException $e) {
-            $this->error('An error occurred whilst running PHP Code Sniffer: ' . $e->getMessage(),
-                self::EXIT_EXCEPTION);
+
+            $this->error('PHPCS detected errors, aborting commit!', self::EXIT_ERRORS_FOUND);
+        } catch (Exception $e) {
+            $this->error('An error occurred trying to run PHPCS: ' . PHP_EOL . $e->getMessage(), self::EXIT_WITH_EXCEPTION);
         }
     }
 
     /**
-     * Run The PHP CodeSniffer for only the staged files that are in configured locations.
+     * Build the path to the PHPCS binary
      *
-     * @since 0.1.0
-     *
-     * @return integer
-     * @throws DeepExitException
+     * @return string
      */
-    protected function runPhpCodeSniffer()
+    protected function getPhpCsPath()
     {
-        $runner = new Runner();
-        $reflector = new ReflectionObject($runner);
+        $root = FileSystemPath::fromString($this->root);
 
-        $runner->config = new Config();
+        $phpCsPath = $root->joinAtomSequence(
+            [
+                "vendor",
+                "bin",
+                $this->getPhpCsBinary(),
+            ]
+        );
 
-        $runner->init();
-
-        $runner->config->interactive = false;
-        $runner->config->cache = false;
-
-        $runner->config->files = $this->getMatchingFiles($runner->config->files, $this->getStagedFiles());
-
-        $runMethod = $reflector->getMethod('run');
-
-        $runMethod->setAccessible(true);
-        $numberOfErrors = (int)$runMethod->invoke($runner);
-
-        return $numberOfErrors;
+        return $phpCsPath->string();
     }
 
     /**
-     * Only return the files that match the pre-configured paths.
-     *
-     * @since 0.1.0
-     *
-     * @param string[] $configuredPaths
-     * @param string[] $stagedFiles
-     *
-     * @return string[]
+     * Build teh path to the PHPCS configuration
+     * @return string
      */
-    protected function getMatchingFiles(array $configuredPaths = [], array $stagedFiles = [])
+    protected function getPhpCsConfigurationPath()
     {
-        $matchingFiles = [];
+        $root = FileSystempath::fromString($this->root);
 
-        foreach ($configuredPaths as $configuredPath) {
-            try {
-                $configuredPath = PlatformFileSystemPath::fromString($configuredPath)->toAbsolute();
-            } catch (InvalidPathStateException $e) {
-                $this->error('Unable to parse configured path: ' . $configuredPath, false);
-                continue;
-            }
+        $phpCsConfigurationPath = $root->joinAtomSequence(
+            [
+                "phpcs.xml",
+            ]
+        );
 
-            foreach ($stagedFiles as $stagedFile) {
-                try {
-                    $stagedFile = PlatformFileSystemPath::fromString($stagedFile)->toAbsolute();
-                } catch (InvalidPathStateException $e) {
-                    $this->error('Unable to parse staged file: ' . $stagedFile, false);
-                    continue;
-                }
+        return $phpCsConfigurationPath->string();
+    }
 
-                if ($configuredPath->isAncestorOf($stagedFile)) {
-                    array_push($matchingFiles, $stagedFile->string());
-                }
-            }
+    /**
+     * Return the correct binary for the current OS
+     *
+     * @return string
+     */
+    protected function getPhpCsBinary()
+    {
+        switch (PHP_OS_FAMILY) {
+            case self::OS_WINDOWS:
+                return "phpcs.bat";
+                break;
+            default:
+                return "phpcs";
+                break;
         }
+    }
 
-        return $matchingFiles;
+    /**
+     * Check whether PHPCS Configuration is available
+     *
+     * @throws RuntimeException
+     */
+    protected function checkPhpCsConfiguration()
+    {
+        if (!file_exists($this->getPhpCsConfigurationPath())) {
+            throw new RuntimeException("PHPCS Configuration file missing");
+        }
     }
 }
