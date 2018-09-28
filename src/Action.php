@@ -45,7 +45,8 @@ class Action extends BaseAction
             $this->write($process->getOutput());
 
             if ($process->isSuccessful()) {
-                $this->success('PHPCS detected no errors, allowing commit to proceed.');
+                $this->success('PHPCS detected no errors, allowing commit to proceed.', false);
+                return;
             }
 
             $this->error('PHPCS detected errors, aborting commit!', self::EXIT_ERRORS_FOUND);
